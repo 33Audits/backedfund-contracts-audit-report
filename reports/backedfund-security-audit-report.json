@@ -1,0 +1,1112 @@
+{
+  "report": {
+    "title": "BackedFund Security Audit Report",
+    "organization": "33Labs",
+    "report_date": "2026-10-13",
+    "repository": "https://github.com/BuildTheTech/BackedFund-Contracts",
+    "branch": "main",
+    "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+    "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+    "ci": {
+      "url": "https://github.com/BuildTheTech/BackedFund-Contracts/actions/runs/38331787165",
+      "conclusion": "failure",
+      "passed_stages": [
+        "compile",
+        "release-consistency",
+        "size",
+        "dead-code",
+        "typecheck",
+        "unit-tests"
+      ],
+      "failed_stage": "exact production coverage",
+      "failure_reason": "Node.js heap out of memory; exit code 134",
+      "skipped_stages": [
+        "deployment replay",
+        "base-plazm-fork",
+        "base-protocol-e2e"
+      ]
+    },
+    "totals": {
+      "findings": 28,
+      "severity": {
+        "High": 3,
+        "Medium": 9,
+        "Low": 16
+      },
+      "disposition": {
+        "Fixed in source": 26,
+        "Mitigated": 2
+      },
+      "open_github_issues": 28
+    },
+    "authors": [
+      {
+        "name": "Favour Aniogor",
+        "role": "Security Researcher",
+        "url": "https://github.com/PhantomOz"
+      }
+    ]
+  },
+  "findings": [
+    {
+      "source_issue": 1,
+      "source_finding_id": "H-01",
+      "id": "H-01",
+      "title": "Anyone can push a project's support and LP fee accruals into ProjectFeeVault via claimFor, stranding them permanently",
+      "severity": "High",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/1",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "f42ebfb8cc7bc1dd3b47ecd9f96b127b454c8e8d2c14f8d7e88db0c856d7c5b9",
+      "latest_evidence": {
+        "author": "0x23r0",
+        "created_at": "2026-10-04T12:30:13Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/1#issuecomment-5979934156",
+        "summary": "Reviewed at eeb556e. ProjectFeeVault.collect() now forwards the vault’s full balance and skips claiming when no fees remain in the hook. This allows fees already sent through claimFor() to be collected and credited correctly."
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:48:07Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/1#issuecomment-5977833099",
+          "body": "Fixed: ProjectFeeVault.collect now forwards the vault’s full accrued token balance, including fees pushed in through claimFor. The controller accounts for the amount actually received."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-04T12:30:13Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/1#issuecomment-5979934156",
+          "body": "Reviewed at eeb556e. ProjectFeeVault.collect() now forwards the vault’s full balance and skips claiming when no fees remain in the hook. This allows fees already sent through claimFor() to be collected and credited correctly.\n\nAutomatic collection also checks the vault’s balance, so it no longer skips these funds when the hook’s claimable amount is zero.\nThe existing recovery regression passes. I consider this finding resolved."
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 2,
+      "source_finding_id": "H-02",
+      "id": "H-02",
+      "title": "Stale cached price at seedLiquidity lets a free pre-seed swap freeze or drain launch funds",
+      "severity": "High",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/2",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "70ae4c4b93aee6656f03165de9de66f9e517ce69ac9b4ec16d143ab0d6b05661",
+      "latest_evidence": {
+        "author": "PhantomOz",
+        "created_at": "2026-10-09T12:49:29Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/2#issuecomment-6081222044",
+        "summary": "Reviewed the round-2 fix in `c03961a`. Looks correct:"
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:48:19Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/2#issuecomment-5977834289",
+          "body": "Fixed: Swaps are blocked until initial liquidity is seeded. The factory activates the hook only after seeding and verifies the pool price has not moved from the intended seed price."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-04T13:30:08Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/2#issuecomment-5980493862",
+          "body": "Reviewed at `eeb556e`. `beforeSwap()` now rejects swaps until the factory activates the pool after adding initial liquidity. Only the factory can activate it, and a failed seed transaction rolls back the activation.\n\n`_seedLiquidity()` also checks that the live pool price matches the intended seed price before adding liquidity. Together, these changes address the reported pre-seed price manipulation.\n\nThe pre-seed blocking and related seeding tests pass. I consider this finding resolved for pools using `BackedFundFeeHook`."
+        },
+        {
+          "author": "PhantomOz",
+          "created_at": "2026-10-06T15:10:57Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/2#issuecomment-6019271046",
+          "body": "**Configuration note on the fix at `eeb556e`.**\n\nThe pre-seed swap block is activated only when `hookRegistry.hookRequiresConfig(mode, hook)` is true: `_requiresHookActivation[launchId] = requiresConfig` gates `onPoolSeeded`, and only `BackedFundFeeHook` enforces `_poolSeeded` in `beforeSwap`. Any hook whitelisted with `requiresConfig = false` still allows pre-seed swaps. The new `require(spotSqrtPriceX96 == seed.sqrtPriceX96, \"Factory: seed price moved\")` in `_seedLiquidity` then turns one free pre-seed swap into a guaranteed seeding failure for that launch.\n\nThis is admin configuration rather than a code bug. We suggest documenting, or enforcing in `HookRegistry.setHookAllowed`, that hooks used for Standard/Bond pools must block swaps until seeded. Also note that the deployed hook must be redeployed: the new `BEFORE_ADD_LIQUIDITY` flag changes the required address bits.\n"
+        },
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-08T23:37:21Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/2#issuecomment-6071175437",
+          "body": "Added mandatory alternate-hook lifecycle checks and factory-level pre-seed swap probes covering both directions and exact-input/output modes. Permissive or partial guards are rejected, unrelated reverts do not qualify, and probes roll back atomically. The actual-price check at seeding remains. Regression and real-PoolManager fork tests pass. Hook implementations still require independent review: probes are configuration safeguards, not proof against malicious code."
+        },
+        {
+          "author": "PhantomOz",
+          "created_at": "2026-10-09T12:49:29Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/2#issuecomment-6081222044",
+          "body": "Reviewed the round-2 fix in `c03961a`. Looks correct:\n\n- `HookRegistry.setHookAllowed` and `LaunchPoolFactory._createHookedPool` both require `requiresConfig = true`, deployed code and the `BEFORE_SWAP` flag; `_requiresHookActivation` is now always true.\n- `_verifyPreseedGate` (`LaunchPoolFactory.sol:347`) probes all four direction/mode combinations, rolls each back, and accepts only the exact `\"Hook: pool not seeded\"` error, either plain or inside v4-core's `WrappedError(address,bytes4,bytes,bytes)` envelope. The encoding matches v4-core.\n\nTwo informational notes for the hook-whitelisting review checklist (no code change needed):\n\n1. **The probe is behavioural, not a proof.** A hook can pass by reverting with the gate error only when the swap originates from the factory. Already acknowledged as admin trust; worth keeping on the checklist.\n2. **`afterInitialize` must be factory-only.** `BackedFundFeeHook.afterInitialize` requires `sender == poolFactory` (`BackedFundFeeHook.sol:262`). The probes don't check this. An alternate allowed hook without that restriction lets anyone initialize a Built launch's pool before settlement, which permanently breaks that launch's settlement. Any new hook added to the registry should be checked for it.\n\nMinor: if an allowed hook is paused, its `beforeSwap` reverts with a different error, so pool creation reverts until it is unpaused. Fail-closed, so fine.\n"
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 3,
+      "source_finding_id": "H-03",
+      "id": "H-03",
+      "title": "Anyone can fill V4's per-tick liquidity cap at the factory's boundary ticks for ~2e12 wei, permanently blocking seedLiquidity",
+      "severity": "High",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/3",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "bad09961f1bcfb7c19ad4c5977ee83246f14adc358b2573b4e2044cd0419d4f1",
+      "latest_evidence": {
+        "author": "AvantgardeScott",
+        "created_at": "2026-10-08T23:37:33Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/3#issuecomment-6071177716",
+        "summary": "Fixed in source: boundary authorization no longer depends on whether the creator’s initial LP was released. The project’s pinned liquidity executor remains authorized for its separate, permanently locked support position. Regression tests cover post-release additions, unauthorized boundary access, unknown/unseeded pools, and double-release protection. All 368 tests pass. Redeployment is required for existing immutable factories."
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:48:32Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/3#issuecomment-5977835744",
+          "body": "Fixed: The hook now reserves either full-range boundary tick for the LaunchPoolFactory and the executor assigned to a live project. Third-party LPs can still use interior ranges. This hook change requires deployment before it protects pools."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-04T14:02:12Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/3#issuecomment-5980821884",
+          "body": "Reviewed at `eeb556e`. The hook now restricts both boundary ticks while leaving interior ranges available, addressing the reported outsider liquidity additions.\n\n>However, `isAuthorizedBoundaryLiquidityAdder()` rejects the assigned support executor once the creator’s initial LP has been released. The executor’s separate permanent support position still uses these boundaries, so releasing the initial LP also prevents future support additions.\n\nPlease preserve the assigned executor’s access after initial LP release and add coverage for that lifecycle before closing. The boundary restrictions also require deployment of the updated hook.\n"
+        },
+        {
+          "author": "PhantomOz",
+          "created_at": "2026-10-06T15:10:49Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/3#issuecomment-6019268559",
+          "body": "**Follow-up on the fix at `eeb556e`: the executor lockout strands funds permanently. Suggest treating it as Medium.**\n\nBuilding on @0x23r0's note about the assigned executor losing access after the initial LP is released:\n\n- `LaunchPoolFactory.releaseLiquidity` is **permissionless**, so anyone can trigger this the moment a 12–48 month LP lock expires.\n- After release, `isAuthorizedBoundaryLiquidityAdder` returns `false` (`if (!launchPool.seeded || launchPool.released) return false;`). `ProjectSupportExecutor._addPermanentLiquidity` adds at `minUsableTick` / `maxUsableTick` and calls `modifyLiquidity` directly, so `BackedFundFeeHook.beforeAddLiquidity` reverts with `\"Hook: reserved boundary tick\"`.\n- The only outflow of `liquidityBalance` is the liquidity execution (`ProjectSupportController.sol:595`). A manual `executeLiquiditySupport` reverts, and `_attemptAutomaticLiquiditySupport` swallows the revert in its try/catch. Nothing reroutes the bucket.\n\n**Impact:** for every launch with a timed LP commitment, everything credited to the liquidity bucket after unlock stays permanently in the controller. That is 15% of trading fees plus the treasury yield strategy's `liquidityBps` share. Buy-burn is unaffected, since it only swaps.\n\n**Fix:** keep the executor authorized independent of the creator's LP release, e.g.\n\n```solidity\nif (sender == address(this)) return true;\n...\nif (!launchPool.seeded) return false;   // drop `|| launchPool.released` for the executor branch\n```\n\nAdd a regression test: seed, warp past `unlockTime`, `releaseLiquidity`, then `executeLiquiditySupport` must succeed.\n"
+        },
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-08T23:37:33Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/3#issuecomment-6071177716",
+          "body": "Fixed in source: boundary authorization no longer depends on whether the creator’s initial LP was released. The project’s pinned liquidity executor remains authorized for its separate, permanently locked support position. Regression tests cover post-release additions, unauthorized boundary access, unknown/unseeded pools, and double-release protection. All 368 tests pass. Redeployment is required for existing immutable factories."
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 4,
+      "source_finding_id": "M-01",
+      "id": "M-01",
+      "title": "beforeSwap sizes the counter-asset fee on the requested amount, not the executed specified-side delta, overcharging trades that partial-fill against a price limit",
+      "severity": "Medium",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/4",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "734bc8033907c088b740ff0e8bf6db8b27c629b2f84cbf5eeb0216c287be637e",
+      "latest_evidence": {
+        "author": "0x23r0",
+        "created_at": "2026-10-04T14:02:54Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/4#issuecomment-5980827405",
+        "summary": "`afterSwap()` now requires the specified side to execute the full fee-adjusted amount. A partial fill reverts the transaction, including the earlier fee collection. "
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:48:46Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/4#issuecomment-5977837264",
+          "body": "Fixed: A swap that only partially fills its specified side now reverts instead of charging a fee calculated on an amount that did not execute."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-04T14:02:54Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/4#issuecomment-5980827405",
+          "body": "`afterSwap()` now requires the specified side to execute the full fee-adjusted amount. A partial fill reverts the transaction, including the earlier fee collection. \n\nThe check covers exact-input buys and exact-output sells where the counter asset is the specified currency. Fees on the other swap shapes remain based on actual execution.\n\nThe existing partial-fill regression passes using mock deltas. I consider the reported overcharge resolved by rejecting these partial fills."
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 5,
+      "source_finding_id": "M-02",
+      "id": "M-02",
+      "title": "Forcing finalizeLaunch to revert lets anyone permanently burn a launch's tokens",
+      "severity": "Medium",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/5",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "7b031c976625ddd9467f456cd44dca49019c1132d583e1e9a9553d5a5dd0d5d4",
+      "latest_evidence": {
+        "author": "AvantgardeScott",
+        "created_at": "2026-10-13T00:09:49Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/5#issuecomment-6135056531",
+        "summary": "Implemented the recovery-window fix. The authority and public cancellation deadlines now use the existing pause clock, so paused time does not count toward either window, including when a pause spans the sale end."
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:49:18Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/5#issuecomment-5977840988",
+          "body": "Fixed: An outsider can no longer cancel an ordinary launch that met its soft cap merely because finalization is delayed. The authority-controlled and routed cancellation paths remain available."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-04T14:03:26Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/5#issuecomment-5980831665",
+          "body": "Reviewed at `eeb556e`. A non-authority caller can no longer cancel a Standard/BondTreasury launch that met its soft cap merely because finalization is delayed.\n\nThe recovery test confirms that the outsider call is rejected and token supply remains unchanged. It also verifies that authority cancellation and contributor refunds remain available.\n\n This resolves the reported permissionless cancellation and burn path. Authority-controlled recovery and routed-launch cancellation remain separate permitted paths.\n"
+        },
+        {
+          "author": "PhantomOz",
+          "created_at": "2026-10-06T15:10:55Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/5#issuecomment-6019270444",
+          "body": "**Note on the fix at `eeb556e`: a trust trade-off worth recording.**\n\nThe fix is correct for the reported grief: an outsider can no longer cancel a soft-cap-met Standard/BondTreasury launch. A side effect: if finalization of such a launch ever fails **permanently**, contributors' ETH can only be released by `protocolAuthority` calling `cancelUnfinalizedLaunch`. Before the fix this was self-service after `endTime + 7 days`.\n\n**Suggestion (optional):** add a long permissionless backstop so contributor refunds never depend solely on the authority, e.g.\n\n```solidity\nif (buildRouter == address(0) && refundableETH >= launch.softCap && msg.sender != protocolAuthority) {\n    if (block.timestamp < uint256(launch.endTime) + 30 days) revert Unauthorized();\n}\n```\n\nThe 30-day window is long enough that a temporary finalization block cannot be used for griefing.\n"
+        },
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-08T23:37:06Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/5#issuecomment-6071172555",
+          "body": "Added a 30-day permissionless recovery backstop for unfinalized, soft-cap-successful Standard/Bond launches, preserving seven-day ProtocolAuthority recovery and blocking earlier outsider cancellation. Cancellation remains irreversible and pause-gated; Built-route deadlines are unchanged. Added regression coverage for exact deadlines, failed liquidity seeding, full refunds, zero fees, token burning, project isolation and late finalization. Frontend eligibility now respects manager capabilities, including older deployments. Fixed in source; deployment pending."
+        },
+        {
+          "author": "PhantomOz",
+          "created_at": "2026-10-09T12:49:27Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/5#issuecomment-6081221384",
+          "body": "Reviewed the round-2 fix in `c03961a`. The backstop logic is correct, but there is one residual gap (Low).\n\n**The 30-day public cancel window counts LaunchManager pause time.**\n\n`cancelUnfinalizedLaunch` (`LaunchManager.sol:690`) gates the public path on wall-clock time:\n\n```solidity\n&& block.timestamp < uint256(launch.endTime) + PUBLIC_RECOVERY_GRACE_PERIOD\n```\n\nThe #10 fix excludes pause time from the routed (Built-on-Plazm / Built-on-Asset) windows, but Standard and Bond launches still measure raw `endTime`, even though LaunchManager now keeps its own `_pauseClock`. The 7-day `FINALIZATION_GRACE_PERIOD` check at `:708` has the same shape.\n\nScenario:\n1. A Standard launch ends with the soft cap met.\n2. LaunchManager is paused and the pause runs past `endTime + 30 days` (`finalizeLaunch` and `cancelUnfinalizedLaunch` are both `whenNotPaused`, so nobody can act during it).\n3. In the unpause block, anyone calls `cancelUnfinalizedLaunch` before `finalizeLaunch` lands. A successful sale is failed and its tokens are burned. Contributors are still refunded, so no ETH is lost.\n\nThis is the #10 pattern reappearing for non-routed launches through the new backstop. It needs a pause longer than 30 days, so Low.\n\nSuggested fix: measure both windows in unpaused time (the function only runs while unpaused, so `isPaused = false`):\n\n```solidity\nuint256 activeSinceEnd = _pauseClock.unpausedTimeAt(block.timestamp, false)\n    - _pauseClock.unpausedTimeAt(launch.endTime, false);\n// public path:   activeSinceEnd < PUBLIC_RECOVERY_GRACE_PERIOD\n// creator path:  activeSinceEnd < FINALIZATION_GRACE_PERIOD\n```\n"
+        },
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-13T00:09:49Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/5#issuecomment-6135056531",
+          "body": "Implemented the recovery-window fix. The authority and public cancellation deadlines now use the existing pause clock, so paused time does not count toward either window, including when a pause spans the sale end.\n\nAdded coverage for Standard and Bond launches, pauses longer than 30 days, repeated pauses, and the exact active-time boundary. The dashboard also calculates eligibility using the active chain’s pause clock."
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 6,
+      "source_finding_id": "M-03",
+      "id": "M-03",
+      "title": "Buy-burn catch-up clock counts pre-deposit idle time, flushing entire balance in one swap",
+      "severity": "Medium",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/6",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "90e6433b947618f1069ff2b8674ed4b707e743984077b2eec4b0b0034a4096af",
+      "latest_evidence": {
+        "author": "AvantgardeScott",
+        "created_at": "2026-10-08T23:36:52Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/6#issuecomment-6071169960",
+        "summary": "Fixed the remaining integration rollback. executeBuyBurn now preserves newly collected buy/burn funding when no tranche is due, returns zero and emits BuyBurnFundingQueued. Empty-bucket funding still starts a fresh clock, preventing idle-time catch-up. No burn or incentive occurs during funding-only calls. Regression tests cover first hook-fee collection, TreasuryVault yield claims, depleted refills, interval boundaries and rollback when an actual burn fails. Requires a new deployment."
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:49:32Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/6#issuecomment-5977842536",
+          "body": "Fixed: The buy-burn interval now starts when funds first enter an empty bucket, so a long idle period cannot make the first execution consume the entire balance."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-04T16:23:52Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/6#issuecomment-5982052566",
+          "body": "Reviewed at eeb556e. All three funding paths reset the per-currency checkpoint when funding an empty buy-burn bucket. This addresses the reported accumulation of execution time before first funding, including refills after depletion.\nOne integration change needs clarification: if executeBuyBurn() first funds its empty execution bucket, the new checkpoint makes execution too early, and the outer revert also rolls back the collection. Funding therefore has to complete separately before the first interval can pass.\nThe code comments and client guide still describe a single-call startup. Please update that description if separate initial collection is intended, or allow collection to complete when no execution is due. This follow-up is based on source review."
+        },
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-08T23:36:52Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/6#issuecomment-6071169960",
+          "body": "Fixed the remaining integration rollback. executeBuyBurn now preserves newly collected buy/burn funding when no tranche is due, returns zero and emits BuyBurnFundingQueued. Empty-bucket funding still starts a fresh clock, preventing idle-time catch-up. No burn or incentive occurs during funding-only calls. Regression tests cover first hook-fee collection, TreasuryVault yield claims, depleted refills, interval boundaries and rollback when an actual burn fails. Requires a new deployment."
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 7,
+      "source_finding_id": "M-04",
+      "id": "M-04",
+      "title": "Project-wide liquidity-support cooldown lets a dust call block the automatic drip for 24h",
+      "severity": "Medium",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/7",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "1b45e637a30ba7d3041c30e6946ae835ee9a769ce1932fd3eecef4dead2a8d6f",
+      "latest_evidence": {
+        "author": "0x23r0",
+        "created_at": "2026-10-04T16:24:37Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/7#issuecomment-5982058614",
+        "summary": "Reviewed at eeb556e. Manual and automatic liquidity-support execution now use the same per-currency cooldown checks. Public callers must execute the full recorded balance, so they cannot select a tiny portion of a larger balance. Newly credited deposits totaling at least the previous execution amount can also reopen that currency’s eligibility. The relevant controller tests pass, covering public partial-execution rejection, cooldown enforcement, new-deposit eligibility and independent execution in another currency. I consider this finding resolved."
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:49:57Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/7#issuecomment-5977845131",
+          "body": "Fixed: Liquidity cooldowns are tracked per currency. Public callers cannot choose a dust-sized partial execution, and a meaningful new deposit can bypass a cooldown started by a smaller prior execution."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-04T16:24:37Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/7#issuecomment-5982058614",
+          "body": "Reviewed at eeb556e. Manual and automatic liquidity-support execution now use the same per-currency cooldown checks.\nPublic callers must execute the full recorded balance, so they cannot select a tiny portion of a larger balance. Newly credited deposits totaling at least the previous execution amount can also reopen that currency’s eligibility.\nThe relevant controller tests pass, covering public partial-execution rejection, cooldown enforcement, new-deposit eligibility and independent execution in another currency. I consider this finding resolved."
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 20,
+      "source_finding_id": "M-05",
+      "id": "M-05",
+      "title": "Reward income on adapter-held bond units while totalBondUnits is zero makes every project bond mint revert, freezing pending treasury ETH",
+      "severity": "Medium",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/20",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "20c0bf5b572b48fd79bc5fc512c24aa552c6f8b43384899326b4b2e1e9bd5259",
+      "latest_evidence": {
+        "author": "0x23r0",
+        "created_at": "2026-10-05T14:29:12Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/20#issuecomment-5996542895",
+        "summary": "Reviewed at eeb556e. The reported zero-unit mint freeze is fixed."
+      },
+      "evidence_comments": [
+        {
+          "author": "PhantomOz",
+          "created_at": "2026-10-03T00:33:37Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/20#issuecomment-5963666525",
+          "body": "**Variant (from an external finding, \"Out-of-band Bernard mints can permanently strand every project's pending yield\"): same root cause and fix as this issue, so filed here instead of separately.**\n\nThe units the adapter didn't mint can be credited **while `totalBondUnits > 0`**, not only while it is zero. In that state they do no harm: `_harvest` (`UniversalBondsAdapter.sol:584-591`) spreads their rewards across real positions as a windfall. The mint check in `_mintProjectBond` measures only the change in units (`:530-542`), so it ignores them.\n\nThe freeze starts later. Once every Active position redeems, `totalBondUnits` returns to 0 (`:446`), and the foreign units stay staked, because redemption only withdraws `position.bondUnits` (`:431`, `:438`). From then on, `_harvest` returns early (`:580`). The next `_mintProjectBond` picks up their pending rewards inside `bonds.mint` (`:543-545`), and `_allocateYield` reverts on `require(totalBondUnits > 0)` (`:588`). So a foreign mint at any point in the adapter's life can set up the freeze for after the next full drain.\n\n**Correction to the external title:** what freezes is the **`PendingMint` treasury ETH**, not \"every project's pending yield\". Yield already recorded for positions stays claimable (`claimYield`'s `_harvest` does nothing at zero units). Pending reinvestment can't be affected, because an Active position always has `bondUnits > 0`. The only rewards left stranded are the foreign units' own, which belong to no project.\n\nThe fix proposed above (book income that arrives when `totalBondUnits == 0` to an unallocated bucket instead of reverting) covers this variant. Optionally, also reconcile `rewardPool.userInfo(adapter).amount` against `totalBondUnits` so foreign units are visible.\n"
+        },
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:54:32Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/20#issuecomment-5977875061",
+          "body": "Fixed: Yield attributable to externally credited, unassigned bond units is quarantined rather than allocated to project positions or allowed to revert the first project mint."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-05T14:29:12Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/20#issuecomment-5996542895",
+          "body": "Reviewed at eeb556e. The reported zero-unit mint freeze is fixed."
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 21,
+      "source_finding_id": "M-06",
+      "id": "M-06",
+      "title": "Buy-burn tranche can grow past the executor's price-impact cap with no partial path, freezing the bucket (organically or via a fake-hook deposit)",
+      "severity": "Medium",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/21",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "1f9309fba60aac45541f69a525f010a3288e350854f935cf5a657e2250d95be7",
+      "latest_evidence": {
+        "author": "0x23r0",
+        "created_at": "2026-10-05T14:29:23Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/21#issuecomment-5996546591",
+        "summary": "Reviewed at eeb556e. Fixed through authorized partial buy-burn execution."
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:54:54Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/21#issuecomment-5977877299",
+          "body": "Fixed: The creator or protocol authority can execute a bounded partial buy-burn when the scheduled tranche exceeds route capacity. Public keepers still cannot use a tiny partial amount to reset the schedule."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-05T14:29:23Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/21#issuecomment-5996546591",
+          "body": "Reviewed at eeb556e. Fixed through authorized partial buy-burn execution."
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 22,
+      "source_finding_id": "M-07",
+      "id": "M-07",
+      "title": "ProtocolAuthority keeps a replaced signer's confirmations valid and proposals never expire, so one live signer can finish stale proposals",
+      "severity": "Medium",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/22",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "1d35bc6dd621b563fbb3573bbb4cde6edca533fb60cb9c0451972d948a6ab093",
+      "latest_evidence": {
+        "author": "0x23r0",
+        "created_at": "2026-10-05T17:32:33Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/22#issuecomment-5999696868",
+        "summary": "Reviewed at eeb556e. Proposals now expire after 30 days, and signer rotation invalidates proposals created under the previous signer set. Both confirmation and execution enforce these checks. I consider the reported stale-proposal issue fixed."
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:55:08Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/22#issuecomment-5977878868",
+          "body": "Fixed: Proposals now expire after 30 days, are invalidated by signer-set rotation, and can be canceled by their proposer. Old confirmations cannot execute under a new signer set."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-05T17:32:33Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/22#issuecomment-5999696868",
+          "body": "Reviewed at eeb556e. Proposals now expire after 30 days, and signer rotation invalidates proposals created under the previous signer set. Both confirmation and execution enforce these checks. I consider the reported stale-proposal issue fixed."
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 24,
+      "source_finding_id": "M-08",
+      "id": "M-08",
+      "title": "addDripLiquidity sizes tranches from the 30-minute TWAP but settles at live spot with no deviation check, so permissionless drips can be sandwiched",
+      "severity": "Medium",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/24",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "9a1c12be017bc50460440eb93e015002b7d14053149d1069c98eb5a64c4c3d8b",
+      "latest_evidence": {
+        "author": "0x23r0",
+        "created_at": "2026-10-05T17:33:08Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/24#issuecomment-5999706529",
+        "summary": "Reviewed at eeb556e. Drip additions now require spot to be within 25 ticks of the 30-minute TWAP and calculate liquidity using live spot. The callback also checks that the price matches the value used for sizing. I consider the reported factory/drip issue fixed."
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:55:53Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/24#issuecomment-5977884582",
+          "body": "Fixed: Permissionless drip additions now require spot to remain within 25 ticks of the 30-minute TWAP and size liquidity from the live spot used for settlement."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-05T17:33:08Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/24#issuecomment-5999706529",
+          "body": "Reviewed at eeb556e. Drip additions now require spot to be within 25 ticks of the 30-minute TWAP and calculate liquidity using live spot. The callback also checks that the price matches the value used for sizing. I consider the reported factory/drip issue fixed."
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 25,
+      "source_finding_id": "M-09",
+      "id": "M-09",
+      "title": "A canceled or never-accepted Bernard redemption leaves the position in RedemptionPending with no recovery path, locking the project's principal",
+      "severity": "Medium",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/25",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "08a6b244b1e914557f37f62a6c88e71383570191d1b84f79294fcfa96ece2968",
+      "latest_evidence": {
+        "author": "0x23r0",
+        "created_at": "2026-10-06T09:56:20Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/25#issuecomment-6013803527",
+        "summary": "Reviewed at eeb556e. The final commit removes the Bernard redemption flow and its pending-redemption state. The canceled or indefinitely pending redemption scenario no longer applies to this version. I consider this resolved by removal."
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:56:59Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/25#issuecomment-5977892946",
+          "body": "Partially fixed: A canceled Bernard redemption can now be retried with new signed data after the bonds are returned. An order left Pending indefinitely still depends on Bernard accepting or canceling it; that external-state case remains open.\n\nThe entire redemption path will likely be removed."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-06T09:56:20Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/25#issuecomment-6013803527",
+          "body": "Reviewed at eeb556e. The final commit removes the Bernard redemption flow and its pending-redemption state. The canceled or indefinitely pending redemption scenario no longer applies to this version. I consider this resolved by removal."
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 8,
+      "source_finding_id": "L-01",
+      "id": "L-01",
+      "title": "Exact-input swap fee floors instead of ceiling, undercharging trader by up to 1 wei",
+      "severity": "Low",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/8",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "67f328c87ce8f782e059703973d2219c158fab7b7aaf71c4b06afadde0c33385",
+      "latest_evidence": {
+        "author": "0x23r0",
+        "created_at": "2026-10-04T16:24:51Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/8#issuecomment-5982060554",
+        "summary": "Status: fixed. Reviewed at eeb556e. Both exact-input fee paths now round upward, and the specified-side execution check uses the same rounded fee. The existing sub-unit tests pass for both fee paths. Inputs too small to leave any amount after the specified-side fee now revert. The reported rounding undercharge is resolve"
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:50:10Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/8#issuecomment-5977846516",
+          "body": "Fixed: The hook now rounds calculated swap fees up, preventing the one-wei undercharge from floor rounding."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-04T16:24:51Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/8#issuecomment-5982060554",
+          "body": "Status: fixed.\nReviewed at eeb556e. Both exact-input fee paths now round upward, and the specified-side execution check uses the same rounded fee.\nThe existing sub-unit tests pass for both fee paths. Inputs too small to leave any amount after the specified-side fee now revert. The reported rounding undercharge is resolve"
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 9,
+      "source_finding_id": "L-02",
+      "id": "L-02",
+      "title": "uint64 truncation of the effective LP unlock time makes late finalization revert for far-future lock timestamps",
+      "severity": "Low",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/9",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "5e715f1caddb1fd351ee4895d5222dab6878bd3a102ead720f32f7d5920e9cff",
+      "latest_evidence": {
+        "author": "AvantgardeScott",
+        "created_at": "2026-10-08T23:35:35Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/9#issuecomment-6071155480",
+        "summary": "Added regression coverage for a finite uint64.max − 1 LP lock finalized exactly ten seconds late, for Standard and Bond Treasury launches. Both successfully clamp to uint64.max, seed liquidity with that unlock time, preserve the original finite terms, and allow buyer claims. Tests also cover extensions landing exactly on and just below the maximum. The existing source fix required no changes."
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:50:22Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/9#issuecomment-5977847779",
+          "body": "Fixed: Effective LP and treasury unlock times are capped at uint64.max before conversion, avoiding truncation on far-future timestamps."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-04T16:25:29Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/9#issuecomment-5982065737",
+          "body": "Status: fixed in source, exact boundary coverage is missing.\n\nReviewed at eeb556e. _effectiveLpUnlock() now caps the calculated timestamp at uint64.max before casting, preventing the reported truncation during delayed finalization.\n\nIn the final commit, supported treasury launches are Permanent-only, so the earlier timed-treasury calculation has been removed.\nThe delayed-lock and permanent-lock tests pass. I consider the source fix correc, a dedicated test where a finite LP lock’s delay-adjusted timestamp exceeds uint64.max would strengthen regression coverage."
+        },
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-08T23:35:35Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/9#issuecomment-6071155480",
+          "body": "Added regression coverage for a finite uint64.max − 1 LP lock finalized exactly ten seconds late, for Standard and Bond Treasury launches. Both successfully clamp to uint64.max, seed liquidity with that unlock time, preserve the original finite terms, and allow buyer claims. Tests also cover extensions landing exactly on and just below the maximum. The existing source fix required no changes."
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 10,
+      "source_finding_id": "L-03",
+      "id": "L-03",
+      "title": "cancelUnfinalizedLaunch ignores the LaunchManager pause, so a pause spanning endTime+7 days lets anyone fail a soft-cap-successful sale",
+      "severity": "Low",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/10",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "1c62ef24b0dcc6412e15f966b738adaf04b5201eefbdc39e253766c42598c114",
+      "latest_evidence": {
+        "author": "AvantgardeScott",
+        "created_at": "2026-10-08T23:36:40Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/10#issuecomment-6071167694",
+        "summary": "Fixed in source: startup grace and active settlement windows now exclude manager/router pause time, counting overlaps once. Unpausing preserves remaining time without reviving already-expired windows. Cancellation and settlement execution remain blocked during pauses; already-enabled refunds remain claimable. Added 16 regressions covering long pauses, partial conversion, overlapping pauses, successful resumed finalization, exact cancellation boundaries and refunds. Existing immutable deployments are unchanged."
+      },
+      "evidence_comments": [
+        {
+          "author": "PhantomOz",
+          "created_at": "2026-10-01T15:33:39Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/10#issuecomment-5934749463",
+          "body": "**Addendum (stage-2 audit): Built launches have a 24h window, and failure is certain, not a race**\n\nThe issue body covers Standard/Bond launches (`endTime + FINALIZATION_GRACE_PERIOD`, 7 days). Built launches (any mode where `_buildOnRouter(mode) != address(0)`) take a tighter path that the body doesn't mention:\n\n- `PLAZM_SETTLEMENT_GRACE_PERIOD = 24 hours` (`LaunchManager.sol:63`).\n- If settlement has not started, `cancelUnfinalizedLaunch` (`:664-690`) allows anyone to cancel once `block.timestamp >= endTime + 24h` (`:679-681`), with no pause check.\n- `_settleLaunch` itself **reverts** with `InvalidState` once `block.timestamp >= endTime + PLAZM_SETTLEMENT_GRACE_PERIOD` (`:535-536`).\n\nSo for a Built launch, a guardian pause that covers the 24h window after `endTime` does more than open a race. Finalization can never succeed afterwards, even once the pause is lifted, so cancellation is the only way out and any address can trigger it. Unpausing does not help. Standard/Bond launches have no such deadline on `finalizeLaunch`; they only fail if the pause runs past `endTime + 7d`.\n\nPossibly related (not verified): if Built settlement has already started, `executeBuiltSettlementChunk` is `whenNotPaused` while cancellation is gated only by `router.settlementCancellationTime(launchId)` (`:671-675`). A pause that spans that time would have the same effect.\n\n**Impact:** contributor ETH is still fully refundable through `claimRefund`. What's lost is the launch itself (tokens burned by `_markFailed`), the creator's LP and treasury, and the protocol's 5% success fee. Severity for the Built variant: **Medium**. A routine emergency pause of just over a day has a permanent side effect nobody intended. Standard/Bond stays Low as filed.\n\n**Fix (covers both):** freeze the grace clock while paused, e.g. track `pausedDuration` and add it to every `endTime + GRACE` comparison, including the `_settleLaunch` deadline. Alternatively, make `cancelUnfinalizedLaunch` `whenNotPaused` *and* extend the `_settleLaunch` deadline by the time spent paused. Adding `whenNotPaused` alone doesn't fix the Built case, because `_settleLaunch` would still revert after unpause.\n"
+        },
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:50:43Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/10#issuecomment-5977850183",
+          "body": "Fixed: cancelUnfinalizedLaunch now respects the manager pause."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-04T16:25:58Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/10#issuecomment-5982069639",
+          "body": "Status: original Standard/Bond issue fixed, Built-mode addendum remains unresolved.\n\nReviewed at eeb556e. Cancellation now respects the manager pause. Together with #5’s authorization change, this addresses the original Standard/BondTreasury issue.\n\nThe Built-mode addendum remains unresolved. An unstarted Built launch still has to begin settlement before endTime + 24 hours, and pausing does not extend that deadline. Blocking cancellation during the pause therefore does not preserve its settlement window after unpause.\n\nPlease retain the Built variant as open, or track it separately from the fixed Standard/Bond path. Its exclusion from this staged review should remain tied to those modes staying disabled."
+        },
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-08T23:36:40Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/10#issuecomment-6071167694",
+          "body": "Fixed in source: startup grace and active settlement windows now exclude manager/router pause time, counting overlaps once. Unpausing preserves remaining time without reviving already-expired windows. Cancellation and settlement execution remain blocked during pauses; already-enabled refunds remain claimable. Added 16 regressions covering long pauses, partial conversion, overlapping pauses, successful resumed finalization, exact cancellation boundaries and refunds. Existing immutable deployments are unchanged."
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 11,
+      "source_finding_id": "L-04",
+      "id": "L-04",
+      "title": "Zero-liquidity pre-seed swaps poison the TWAP that addDripLiquidity later trusts",
+      "severity": "Low",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/11",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "61630030f65c9550e7259545b32102849ba282e4d9b9a4c0062942c1144313d4",
+      "latest_evidence": {
+        "author": "0x23r0",
+        "created_at": "2026-10-05T11:00:49Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/11#issuecomment-5993115197",
+        "summary": "Reviewed at eeb556e. Swaps now revert until the factory seeds and activates the pool, preventing the reported pre-seed swaps from introducing manipulated observations. The pre-seed blocking regression passes."
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:50:55Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/11#issuecomment-5977851410",
+          "body": "Fixed: Pre-seed swaps are blocked until initial liquidity has been added, so they cannot create observations that later influence drip pricing."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-05T11:00:49Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/11#issuecomment-5993115197",
+          "body": "Reviewed at eeb556e. Swaps now revert until the factory seeds and activates the pool, preventing the reported pre-seed swaps from introducing manipulated observations. The pre-seed blocking regression passes.\n\nOracle history still starts at initialization, so an early TWAP can include the fixed initialization-price period. The change does not require a complete lookback window after seeding.\n\nWith that distinction recorded, I consider the reported pre-seed swap-poisoning mechanism resolved."
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 12,
+      "source_finding_id": "L-05",
+      "id": "L-05",
+      "title": "Automatic liquidity-support path hardcodes minLiquidity to zero, disabling slippage protection",
+      "severity": "Low",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/12",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "598515928d760f6ecc6bbe54f1315b2a16c23eced5c16155a5d4cd7c71f1fba7",
+      "latest_evidence": {
+        "author": "AvantgardeScott",
+        "created_at": "2026-10-08T23:36:28Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/12#issuecomment-6071165424",
+        "summary": "Fixed in source: Automatic liquidity support now enforces a nonzero minimum LP output derived independently from the 30-minute TWAP, hook fees, committed conversion route and queued project dust. Manual callers cannot bypass this floor by supplying zero. Missing pricing or insufficient LP output rolls back the liquidity attempt and retains reserves for retry without reverting a completed buy/burn. Added 16 regression tests covering all launch modes, threshold enforcement, dust accounting and retry behavior."
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:51:48Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/12#issuecomment-5977856965",
+          "body": "Needs review: The production executor already requires nonzero liquidity, applies independent swap bounds, and retains unused assets as accounted dust; the zero-liquidity mock in the PoC does not model that path. We have not added a separate controller-derived minLiquidity floor, so this should remain open pending production-pool review."
+        },
+        {
+          "author": "PhantomOz",
+          "created_at": "2026-10-06T15:10:51Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/12#issuecomment-6019269192",
+          "body": "**Analysis of the executor bounds at `eeb556e` (supports \"needs review\", no fork run needed to bound it).**\n\n- `ProjectSupportExecutor.addLiquiditySupport` swaps half the input through `_executeV4Swap`, bounded by `_v4Minimum`. That requires the live V4 quote to be ≥ 99% of the 30-minute TWAP quote (`DIRECT_V4_IMPACT_BPS = 100`), and then applies the 150 bps execution slippage.\n- A manipulated call therefore loses at most ~1% on the swap leg (half the amount). The full-range add then happens at a spot within that band, which bounds the LP-ratio loss to the same order.\n- **Sandwich economics:** the attacker's front-run and back-run swaps each pay the hook's 1% fee. That is ~2% of a front-run large enough to move the price ~1%, to capture under 1% of the swap leg. Not profitable in practice.\n\nSo a controller-side `minLiquidity` floor is largely redundant with the executor's TWAP band. We're fine with closing this as **Acknowledged / Low**. Optionally pass a TWAP-derived `minLiquidity` for defense in depth.\n"
+        },
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-08T23:36:28Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/12#issuecomment-6071165424",
+          "body": "Fixed in source: Automatic liquidity support now enforces a nonzero minimum LP output derived independently from the 30-minute TWAP, hook fees, committed conversion route and queued project dust. Manual callers cannot bypass this floor by supplying zero. Missing pricing or insufficient LP output rolls back the liquidity attempt and retains reserves for retry without reverting a completed buy/burn. Added 16 regression tests covering all launch modes, threshold enforcement, dust accounting and retry behavior."
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 13,
+      "source_finding_id": "L-06",
+      "id": "L-06",
+      "title": "collectTradingFees trusts caller-chosen hook and currency, breaking the single-fee-currency invariant",
+      "severity": "Low",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/13",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "aed4825b59e41919551cb2809e6d9e2f9a32df6bcd936becd3156776292e8912",
+      "latest_evidence": {
+        "author": "0x23r0",
+        "created_at": "2026-10-05T11:01:56Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/13#issuecomment-5993131771",
+        "summary": "Status: fixed."
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:52:15Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/13#issuecomment-5977859881",
+          "body": "Fixed: Fee collection now verifies the hook, fee currency, and support recipients against the project executor’s configured route instead of trusting caller-supplied values."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-05T11:01:56Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/13#issuecomment-5993131771",
+          "body": "Status: fixed.\n\nReviewed at eeb556e. collectTradingFees() now checks the supplied hook and currency against the project’s assigned executor route and verifies both fee-vault recipients before collection.\n\nThe production executor derives that route from the factory’s recorded pool and configured hook. Callers can no longer substitute their own fee source or currency.\n\nThe incorrect-hook and incorrect-currency regression tests pass. I consider the reported collection-route issue resolved."
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 14,
+      "source_finding_id": "L-07",
+      "id": "L-07",
+      "title": "executeBuyBurn lets the triggering caller self-select minTokensOut=0, enabling a self-paid sandwich of the guaranteed buy-burn swap",
+      "severity": "Low",
+      "status": "Mitigated / residual MEV acknowledged",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/14",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "b9ac42fd4cbd4f4d68570e07ef0be80b56d460ad234477f50359ee629b8e49f7",
+      "latest_evidence": {
+        "author": "AvantgardeScott",
+        "created_at": "2026-10-08T23:36:13Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/14#issuecomment-6071162551",
+        "summary": "Hardened: caller minTokensOut=0 cannot weaken the executor’s calculated minimum; higher caller limits only tighten it. The controller now independently rejects zero actual output and pays the keeper incentive only after output verification, route checks and token burning. Failed execution or incentive payment atomically rolls back the operation. Added 26 regression tests covering output boundaries, supported routes, payment ordering and rollback. Residual MEV remains acknowledged—these protections do not guarantee that every sandwich is unprofitable."
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:52:39Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/14#issuecomment-5977862402",
+          "body": "Needs review: Even when the trigger caller supplies minTokensOut = 0, the production executor enforces its own TWAP, price-impact, and slippage output bounds. No controller change was made specifically for this finding; a live-pool/fork check is warranted before closing it."
+        },
+        {
+          "author": "PhantomOz",
+          "created_at": "2026-10-06T15:10:53Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/14#issuecomment-6019269887",
+          "body": "**Analysis of the executor bounds at `eeb556e` (supports \"needs review\").**\n\n- The caller's `minTokensOut` can only **tighten** the bound: `if (minTokensOut > executionMinimum) executionMinimum = minTokensOut;` (`ProjectSupportExecutor.sol:239`). Passing `0` falls back to the executor's own minimum.\n- That minimum comes from `_v4Minimum`, which requires the live quote to be ≥ 99% of the 30-minute TWAP quote (`DIRECT_V4_IMPACT_BPS = 100`). So a self-sandwiched execution loses at most ~1% of the tranche.\n- **Sandwich economics:** the attacker pays the hook's 1% fee on both the front-run and the back-run (~2% of a front-run sized to move price ~1%) to extract under 1% of the tranche. Not profitable.\n\nWe're fine with closing this as **Acknowledged / Low**. The residual is the ~1% TWAP band, which is a tunable parameter rather than a missing check.\n"
+        },
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-08T23:36:13Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/14#issuecomment-6071162551",
+          "body": "Hardened: caller minTokensOut=0 cannot weaken the executor’s calculated minimum; higher caller limits only tighten it. The controller now independently rejects zero actual output and pays the keeper incentive only after output verification, route checks and token burning. Failed execution or incentive payment atomically rolls back the operation. Added 26 regression tests covering output boundaries, supported routes, payment ordering and rollback. Residual MEV remains acknowledged—these protections do not guarantee that every sandwich is unprofitable."
+        }
+      ],
+      "notes": "Finding #14 is hardened in source; the source discussion explicitly acknowledges residual MEV and does not guarantee every sandwich is unprofitable."
+    },
+    {
+      "source_issue": 15,
+      "source_finding_id": "L-08",
+      "id": "L-08",
+      "title": "claimAndRoute hands the creator the whole reinvest share once bond units reach zero, bypassing the 50% creator-yield cap",
+      "severity": "Low",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/15",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "3b462b2d1c53a72e7baa315ec7ba55edfa79b643bd34269bf23282f1053b8cf5",
+      "latest_evidence": {
+        "author": "0x23r0",
+        "created_at": "2026-10-05T11:02:30Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/15#issuecomment-5993139877",
+        "summary": "Status: fixed, the associated redemption scenario was also removed."
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:52:57Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/15#issuecomment-5977864543",
+          "body": "Fixed: The reinvestment allocation remains reserved for project bonds, including final checkpointed yield after principal redemption. It is never added to the creator payout."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-05T11:02:30Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/15#issuecomment-5993139877",
+          "body": "Status: fixed, the associated redemption scenario was also removed.\n\nReviewed at eeb556e. The branch that added the reinvestment allocation to the creator’s payout has been removed. The creator receives only the configured creator share, while the reinvestment allocation goes through the adapter with transfer and conversion checks.\nThe allocation and reinvestment tests pass. The final release also removes principal redemption, so the earlier post-redemption scenario no longer applies.\n\nI consider the reported creator-share bypass resolved."
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 16,
+      "source_finding_id": "L-09",
+      "id": "L-09",
+      "title": "consult() ignores the latest cumulative checkpoint when it is not an observation, letting a price move that left the window still skew the TWAP",
+      "severity": "Low",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/16",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "184dcbef35af510c595845b6f2d748f810e5124562bbe71a4f20c07366c6a44e",
+      "latest_evidence": {
+        "author": "0x23r0",
+        "created_at": "2026-10-05T14:00:14Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/16#issuecomment-5996007041",
+        "summary": "Status: fixed for the reported checkpoint omission."
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:53:20Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/16#issuecomment-5977867158",
+          "body": "Fixed: The hook’s TWAP calculation now includes the latest cumulative checkpoint even when that checkpoint is not a stored observation."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-05T14:00:14Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/16#issuecomment-5996007041",
+          "body": "Status: fixed for the reported checkpoint omission.\n\nReviewed at eeb556e. consult() now considers the latest cumulative checkpoint when selecting the interpolation points, even when the observation throttle prevented a stored observation.\n\nThe regression covering a price change before the requested window passes, along with the related oracle interpolation and rounding tests.\n\nThis addresses the reported omission of the latest checkpoint. I consider this finding resolved."
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 17,
+      "source_finding_id": "L-10",
+      "id": "L-10",
+      "title": "Launch policy accepts extreme-price configurations whose full-range seed can never use 99% of both budgets, so finalization always reverts",
+      "severity": "Low",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/17",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "e97ed13c96acda98066b6cec1977f79531f1141112643d33ec16ac31a98c5bc0",
+      "latest_evidence": {
+        "author": "AvantgardeScott",
+        "created_at": "2026-10-08T23:35:51Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/17#issuecomment-6071158426",
+        "summary": "Fixed: Built-on-Plazm and Built-on-Asset now preflight soft- and hard-cap initial seed budgets before launch creation completes or funding opens. Checks use guarded route prices, exact capped token allocations, slippage stress endpoints and the factory’s existing full-range math and 99% consumption floors. Invalid configurations atomically revert creation. Added 26 regressions covering both modes, token orderings, cap boundaries, successful settlement and rollback/refunds. Settlement still validates actual acquired budgets because market prices can change after creation."
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:53:33Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/17#issuecomment-5977868556",
+          "body": "Fixed: Pool creation now preflights whether full-range liquidity can consume the launch’s seed budgets, including the minimum WETH budget at soft cap, and rejects unseedable configurations before funding."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-05T14:00:53Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/17#issuecomment-5996019314",
+          "body": "Reviewed at eeb556e. Standard/Bond WETH pool creation now checks the hard-cap and soft-cap LP budgets against the full-range position requirements before contributions. The checks use upward-rounded input requirements and the same 99% thresholds used during seeding.\n\nThe extreme-price rejection regression passes. It uses an EOA manager, however, so it does not directly exercise the production soft-cap callback.\n\nPlease qualify the \"before funding\" statement: BuiltOnPlazm/BuiltOnAsset create their pools during finalization, so their factory check still runs after contributions. The reported WETH case is addressed equivalent early validation for Built modes remains a separate consideration."
+        },
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-08T23:35:51Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/17#issuecomment-6071158426",
+          "body": "Fixed: Built-on-Plazm and Built-on-Asset now preflight soft- and hard-cap initial seed budgets before launch creation completes or funding opens. Checks use guarded route prices, exact capped token allocations, slippage stress endpoints and the factory’s existing full-range math and 99% consumption floors. Invalid configurations atomically revert creation. Added 26 regressions covering both modes, token orderings, cap boundaries, successful settlement and rollback/refunds. Settlement still validates actual acquired budgets because market prices can change after creation."
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 18,
+      "source_finding_id": "L-11",
+      "id": "L-11",
+      "title": "Permissionless claimAndRoute during redemption notice creates pendingReinvestmentETH that blocks requestPositionRedemption (full scope)",
+      "severity": "Low",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/18",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "b8c7cda05cd53050cb2f9ebfbec2d72dccef3bcb6227610f52032d9ed5e9e88d",
+      "latest_evidence": {
+        "author": "0x23r0",
+        "created_at": "2026-10-06T07:10:04Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/18#issuecomment-6011266272",
+        "summary": "Reviewed at eeb556e. The partial-fix comment describes the earlier version. This later commit removes the redemption notice and request paths, so pending reinvestment can no longer block the reported operation. I consider this resolved by removal in the reviewed version."
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:53:58Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/18#issuecomment-5977871413",
+          "body": "Partially fixed: Yield claims that create reinvestment ETH are suspended during redemption notice, preventing permissionless callers from continually replenishing the mint queue. Already queued ETH remains project-bound and must be minted before redemption."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-06T07:10:04Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/18#issuecomment-6011266272",
+          "body": "Reviewed at eeb556e. The partial-fix comment describes the earlier version. This later commit removes the redemption notice and request paths, so pending reinvestment can no longer block the reported operation. I consider this resolved by removal in the reviewed version."
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 19,
+      "source_finding_id": "L-12",
+      "id": "L-12",
+      "title": "strengthenTreasuryProfile stays callable after the Bernard redemption is requested, so switching to Permanent strands the payout in the adapter",
+      "severity": "Low",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/19",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "94ad9fc797b4dc5f018890ccc63a0fc6ec756f7d9ff8c2b508351a3942e67107",
+      "latest_evidence": {
+        "author": "0x23r0",
+        "created_at": "2026-10-05T14:29:01Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/19#issuecomment-5996539030",
+        "summary": "Reviewed at eeb556e. Resolved by removing the redemption and profile-change paths."
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:54:11Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/19#issuecomment-5977872832",
+          "body": "Fixed: Treasury-profile strengthening is blocked once redemption has begun, preventing a later switch to Permanent from stranding an adapter payout."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-05T14:29:01Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/19#issuecomment-5996539030",
+          "body": "Reviewed at eeb556e. Resolved by removing the redemption and profile-change paths."
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 23,
+      "source_finding_id": "L-13",
+      "id": "L-13",
+      "title": "Public USDC liquidity-support swap accepts a 75 bps TWAP band that a sandwich can capture (mock-pool PoC, real-pool profitability unverified)",
+      "severity": "Low",
+      "status": "Mitigated / bounded by fork replay",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/23",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "c1168a2041f3eb277a19362c79dde9cadd22f36da2c2f7b64d95e5c1a79f982d",
+      "latest_evidence": {
+        "author": "AvantgardeScott",
+        "created_at": "2026-10-13T00:09:20Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/23#issuecomment-6135049988",
+        "summary": "Addressed the finding with an on-chain policy change, then added a fork replay to verify its effect."
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:55:35Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/23#issuecomment-5977882151",
+          "body": "Open: No parameter change has been made from the mock-pool PoC alone. The production route has capacity, TWAP, and slippage checks, but profitability and any appropriate tighter bound need a Base-fork replay with real pools before this finding can be resolved."
+        },
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-13T00:09:20Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/23#issuecomment-6135049988",
+          "body": "Addressed the finding with an on-chain policy change, then added a fork replay to verify its effect.\n\n- Reduced the default support execution slippage from 150 bps (1.5%) to 30 bps (0.3%), tightening the minimum output accepted for support swaps.\n- Reduced the V3 guard’s maximum spot/TWAP deviation from 300 bps (3%) to 30 bps (0.3%).\n\nAt these defaults, the Base-fork replay had no positive modeled net profit in 40 sampled sandwich cases; 16 cases filled. This is a mitigation demonstrated for the tested block and scenarios, not a guarantee against every sandwich. ProtocolAuthority can still raise the slippage setting, so widening that override is outside the replay’s result."
+        }
+      ],
+      "notes": "Finding #23 is classified as mitigated because its Base-fork replay covered sampled scenarios and explicitly did not guarantee protection against every sandwich; ProtocolAuthority can widen the relevant setting."
+    },
+    {
+      "source_issue": 26,
+      "source_finding_id": "L-14",
+      "id": "L-14",
+      "title": "Treasury ETH is committed to PendingMint at finalization without rechecking Bernard, and has no refund path if minting stops working",
+      "severity": "Low",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/26",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "fbb5ab8045737140d0e76083bc9125d188679ed95641d0b8e1c20bc22455398b",
+      "latest_evidence": {
+        "author": "AvantgardeScott",
+        "created_at": "2026-10-13T00:10:32Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/26#issuecomment-6135065735",
+        "summary": "Implemented a recovery and retry path for ETH refunded from a stale PendingMint position. The TreasuryVault tracks recovered ETH separately and lets the creator or ProtocolAuthority retry it through the original bound adapter and position while the adapter is live."
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:57:24Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/26#issuecomment-5977895562",
+          "body": "Open: No timeout refund has been added for PendingMint treasury ETH. This needs an agreed destination and recovery policy if Bernard minting stops; until then, the funds remain committed to the adapter."
+        },
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-13T00:10:32Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/26#issuecomment-6135065735",
+          "body": "Implemented a recovery and retry path for ETH refunded from a stale PendingMint position. The TreasuryVault tracks recovered ETH separately and lets the creator or ProtocolAuthority retry it through the original bound adapter and position while the adapter is live.\n\nThe retry verifies the principal increase, preserves the existing bond units and position binding, and starts a fresh mint timeout. There is no direct creator withdrawal or payout path."
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 27,
+      "source_finding_id": "L-15",
+      "id": "L-15",
+      "title": "Drip additions treat modifyLiquidity's callerDelta as principal, but it includes donation-created position fees, which can block tranches",
+      "severity": "Low",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/27",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "9ffa1e3bbcfe7ec764a844afcb5d4e10cdba2e2abaaf9b3e5ad303c3a9ba5252",
+      "latest_evidence": {
+        "author": "0x23r0",
+        "created_at": "2026-10-05T14:30:09Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/27#issuecomment-5996560329",
+        "summary": "Reviewed at eeb556e. Fixed."
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:57:38Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/27#issuecomment-5977897145",
+          "body": "Fixed: The factory now separates modifyLiquidity principal from accrued position fees. Drip budgets are charged only for principal, and collected fees go to the recorded LP recipient."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-05T14:30:09Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/27#issuecomment-5996560329",
+          "body": "Reviewed at eeb556e. Fixed."
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    },
+    {
+      "source_issue": 28,
+      "source_finding_id": "L-16",
+      "id": "L-16",
+      "title": "V3 capacity guards stop at the next initialized tick, returning zero on an exact boundary (zeroForOne) and tiny capacity near one",
+      "severity": "Low",
+      "status": "Fixed in source",
+      "issue_state": "open",
+      "issue_url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/28",
+      "audited_sha": "07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3",
+      "remediation_sha": "213a6dba2e2641804ed56555d4f6f763dbe95200",
+      "issue_body_sha256": "a55f9b51217e3903f3e4c6abfe915ee12837270e8b7e5649e05d6fa2bb3ff1cb",
+      "latest_evidence": {
+        "author": "PhantomOz",
+        "created_at": "2026-10-09T12:50:29Z",
+        "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/28#issuecomment-6081238737",
+        "summary": "Reviewed the round-2 fix in `c03961a`. The new `V3InputCapacity` library fixes the single-tick capacity issue: it walks the tick bitmap toward the impact limit, applies `liquidityNet` at each initialized crossing using V3's sign convention, and handles starting exactly on a tick boundary correctly. The reported off-by-one is gone. It's now shared by `PlazmV3TwapGuard`, `ProjectSupportV3TwapGuard` and `BuildAssetV3RouteGuard`."
+      },
+      "evidence_comments": [
+        {
+          "author": "AvantgardeScott",
+          "created_at": "2026-10-04T07:57:48Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/28#issuecomment-5977898256",
+          "body": "Fixed: The authorized partial buy-burn path also provides a way to process a tranche when V3 capacity reports zero or negligible room at a tick boundary."
+        },
+        {
+          "author": "0x23r0",
+          "created_at": "2026-10-05T16:39:57Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/28#issuecomment-5998842118",
+          "body": "Reviewed at eeb556e. The partial buy-burn path helps with small positive capacity, but the zero-capacity case remains: any positive input still fails the capacity check. I’d mark this partially fixed."
+        },
+        {
+          "author": "PhantomOz",
+          "created_at": "2026-10-09T12:50:29Z",
+          "url": "https://github.com/BuildTheTech/BackedFund-Contracts/issues/28#issuecomment-6081238737",
+          "body": "Reviewed the round-2 fix in `c03961a`. The new `V3InputCapacity` library fixes the single-tick capacity issue: it walks the tick bitmap toward the impact limit, applies `liquidityNet` at each initialized crossing using V3's sign convention, and handles starting exactly on a tick boundary correctly. The reported off-by-one is gone. It's now shared by `PlazmV3TwapGuard`, `ProjectSupportV3TwapGuard` and `BuildAssetV3RouteGuard`.\n\nOne informational note (gas only, no code change required):\n\nThe walk is bounded by `MAX_STEPS = 512` (`V3InputCapacity.sol:17`). Each step reads `pool.tickBitmap` in `_nextTick` (`:118`) and, at an initialized tick, `pool.ticks` (`:49`). Anyone can initialize ticks in the target V3 pool by minting a dust position at every spacing inside the impact band (roughly 300 ticks for a 3% band at spacing 1). That pushes each guarded hop to a few million gas, which raises keeper and user costs on routed launches and project-support conversions.\n\nIt doesn't block execution on Base: the walk is bounded, the dust positions cost the attacker gas and capital, and the result stays correct. If the walk does hit the cap, it returns the input accumulated so far, which understates capacity (the safe direction). A 3% band at spacing 1 is about 300 ticks, under the 512 cap, so that doesn't happen at the current settings. Leaving it as is is reasonable; lowering `MAX_STEPS` would cut the worst-case gas at the cost of understating capacity sooner.\n"
+        }
+      ],
+      "notes": "Status reflects live source-remediation evidence in the issue ledger; it is not a deployment attestation."
+    }
+  ]
+}
