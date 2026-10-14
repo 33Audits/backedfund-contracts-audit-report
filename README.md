@@ -36,7 +36,7 @@ The exact remediation-snapshot CI run passed compilation, release-consistency, s
 ## Checksums (SHA-256)
 
 ```text
-625ce5fce309f703c5557a3a8fcad9a630c8224d4bcf82cd71db0121a44964f6  backedfund-security-audit-report.pdf
+74bd623830b8023656499d1911592bb962ec623e8c455118a6b2615f4c79caf0  backedfund-security-audit-report.pdf
 8c2bb8de07220d8c522f3b3bdaf5c69a31c359b7e77b56e66096f32cb64e475d  backedfund-security-audit-report.md
 f3bc07aedd137db43bee1ce3521ceee16a787688994e31fd044049c7be89e1a6  backedfund-security-audit-report.json
 ```
