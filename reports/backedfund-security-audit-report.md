@@ -1,49 +1,50 @@
-# Report Metadata
+# BackedFund Security Audit Report
 
-**Prepared by:** 33Labs  
-**Client / Protocol:** BackedFund  
-**Audited repository:** [BuildTheTech/BackedFund-Contracts](https://github.com/BuildTheTech/BackedFund-Contracts)  
-**Audited branch:** `main`  
-**Original audited commit:** [`07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3`](https://github.com/BuildTheTech/BackedFund-Contracts/commit/07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3)  
-**Remediation snapshot:** [`213a6dba2e2641804ed56555d4f6f763dbe95200`](https://github.com/BuildTheTech/BackedFund-Contracts/commit/213a6dba2e2641804ed56555d4f6f763dbe95200)  
-**Report date:** 13 October 2026  
-**Audit source:** GitHub issue ledger  
-**Findings:** 28 (3 High, 9 Medium, 16 Low)  
-**Remediation disposition:** 26 Fixed in source; 2 Mitigated  
-**GitHub workflow state:** all 28 source issues remain administratively open
+## Introduction
 
-> This report distinguishes the original audited snapshot from the later remediation snapshot. “Fixed in source” means the issue ledger and current source contain remediation evidence; it does not attest that the change is deployed. The latest Contracts CI run passed compilation, release-consistency, size, dead-code, type-check, and unit-test stages, but the exact-coverage stage terminated with a Node.js heap out-of-memory error. Fork and deployment-replay jobs were skipped. The report therefore does not claim a clean full CI run.
+33Labs performed a focused security review of the **BackedFund** smart contracts. The review examined launch creation and lifecycle, contribution and refund paths, finalization, claims and vesting, fee routing, Uniswap V3/V4 integration, treasury and settlement flows, project-bond custody, pooled-yield accounting, project support, buy/burn execution, protocol authority, and emergency controls.
 
-## Executive Summary
-
-The review identified 28 findings: 3 High, 9 Medium, and 16 Low. Live issue comments document source-level remediation for all findings. Twenty-six are classified as **Fixed in source**. Findings L-07 (#14) and L-13 (#23) are classified as **Mitigated** because their own remediation records retain explicit residual MEV limitations.
-
-All 28 GitHub issues remained open at report generation time. Their open state is workflow metadata rather than the report’s remediation disposition. No remediation pull requests were exposed by the repository; fixes were recorded through direct commits and issue comments. Deployment status was not independently verified.
-
-## Audit Scope
-
-**Audited snapshot:** branch `main` at `07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3` (16 September 2026).  
-**Scope authority:** `docs/AUDIT_SCOPE.md` at the audited snapshot.  
-**In scope:** launch creation and lifecycle; contribution, finalization, refund, claim, and vesting paths; success-fee routing and affiliate ETH custody; V4 hook and pool creation; locked LP positions and fee custody; Standard, Bond Treasury, Built-on-Plazm, and Built-on-Asset settlement; project-bond custody and pooled-yield accounting; project support and buy/burn; `ProtocolAuthority`; and emergency-pause surfaces.  
-**Out of deployable production scope:** mocks under `contracts/mocks` and ABI/type declarations under `contracts/interfaces`, while still reviewed when relevant to tests and integration assumptions.  
-**External trust boundaries:** Base WETH/USDC, Uniswap V3/V4 components, DexFi/Bernard contracts, PLAZM, ESHARE, and approved Built-on-Asset tokens and routes.
-
-## Remediation Review
-
-**Reviewed snapshot:** branch `main` at `213a6dba2e2641804ed56555d4f6f763dbe95200` (13 October 2026).  
-**Principal remediation commits referenced by reviewers:** [`eeb556e`](https://github.com/BuildTheTech/BackedFund-Contracts/commit/eeb556e9584ef6ba658595da9bc136286f5fe473) and [`c03961a`](https://github.com/BuildTheTech/BackedFund-Contracts/commit/c03961aaca1dc6b118710e031bd5b56c12460622).  
-**Execution evidence:** [Contracts CI run 38331787165](https://github.com/BuildTheTech/BackedFund-Contracts/actions/runs/38331787165) on the exact remediation snapshot. Unit tests passed. Exact production coverage failed with exit code 134 after a JavaScript heap out-of-memory error; deployment replay and fork jobs were skipped.  
-**Status method:** issue bodies supplied the vulnerability analysis; current issue comments, referenced commits, and CI supplied remediation evidence. Open/closed issue state was not used as a substitute for technical disposition.
+The review identified **28 findings**: **3 High**, **9 Medium**, and **16 Low**. At the remediation snapshot, 26 findings are classified as **Fixed in source** and two as **Mitigated** with explicit residual MEV limitations.
 
 ## Audit Team
 
 | Auditor | Role |
 |---|---|
+| [0x23r0 ↗](https://github.com/0x23r0) | Security Researcher |
 | [Favour Aniogor ↗](https://github.com/PhantomOz) | Security Researcher |
+
+## Disclaimer
+
+A smart contract security review cannot prove the complete absence of vulnerabilities. This assessment was bounded by the agreed scope, available documentation, GitHub issue ledger, and referenced repository snapshots. Additional review, deployment verification, monitoring, and a public bug bounty are recommended before production use. This report is not financial, legal, or investment advice.
 
 ## About 33Labs
 
 33Labs is an independent smart contract security research and development group with six years of experience and over 40 completed audits. We specialize in building and auditing Solidity, Rust, Move, and DeFi systems. Learn more at [33labs.ai](https://33labs.ai) or follow us on X [@33labs_](https://x.com/33labs_).
+
+## About BackedFund
+
+BackedFund is a smart-contract system for permissionless launches, protocol-managed liquidity, treasury and project-bond flows, yield accounting, project support, and buy/burn execution. The reviewed repository integrates Base WETH/USDC, Uniswap V3/V4 components, DexFi/Bernard contracts, PLAZM, ESHARE, and approved Built-on-Asset tokens and routes.
+
+## Audit Scope
+
+- **Repository:** [BuildTheTech/BackedFund-Contracts](https://github.com/BuildTheTech/BackedFund-Contracts)
+- **Audited branch:** `main`
+- **Original audited commit:** [`07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3`](https://github.com/BuildTheTech/BackedFund-Contracts/commit/07ea04fc6fb8c4156bed3cbb5d61c1f7ebc608a3)
+- **Audited snapshot date:** September 16, 2026
+- **Scope authority:** `docs/AUDIT_SCOPE.md` at the audited snapshot
+- **In scope:** launch creation and lifecycle; contribution, finalization, refund, claim, and vesting paths; success-fee routing and affiliate ETH custody; V4 hook and pool creation; locked LP positions and fee custody; Standard, Bond Treasury, Built-on-Plazm, and Built-on-Asset settlement; project-bond custody and pooled-yield accounting; project support and buy/burn; `ProtocolAuthority`; and emergency-pause surfaces
+- **Out of deployable production scope:** mocks under `contracts/mocks` and ABI/type declarations under `contracts/interfaces`, while still reviewed when relevant to tests and integration assumptions
+
+## Remediation Review
+
+- **Reviewed branch:** `main`
+- **Remediation snapshot:** [`213a6dba2e2641804ed56555d4f6f763dbe95200`](https://github.com/BuildTheTech/BackedFund-Contracts/commit/213a6dba2e2641804ed56555d4f6f763dbe95200)
+- **Report date:** 13 October 2026
+- **Principal remediation commits:** [`eeb556e`](https://github.com/BuildTheTech/BackedFund-Contracts/commit/eeb556e9584ef6ba658595da9bc136286f5fe473) and [`c03961a`](https://github.com/BuildTheTech/BackedFund-Contracts/commit/c03961aaca1dc6b118710e031bd5b56c12460622)
+- **Execution evidence:** [Contracts CI run 38331787165](https://github.com/BuildTheTech/BackedFund-Contracts/actions/runs/38331787165) on the remediation snapshot. Unit tests passed. Exact production coverage failed with exit code 134 after a Node.js heap out-of-memory error; deployment replay and fork jobs were skipped
+- **Status method:** issue bodies supplied the vulnerability analysis; issue comments, referenced commits, and CI supplied remediation evidence. Open/closed issue state was not used as a substitute for technical disposition
+
+“Fixed in source” means that source-level remediation evidence was available; it does not attest that a change is deployed. All 28 GitHub issues remained administratively open when this report was generated.
 
 ## Methodology
 
@@ -54,10 +55,6 @@ The audit combined manual adversarial review, invariant analysis, code-path trac
 - **High:** exploitation can cause major loss, permanent protocol failure, or a critical integrity violation under realistic conditions.
 - **Medium:** exploitation can cause material loss, denial of service, or invariant failure but requires stronger preconditions or has a narrower blast radius.
 - **Low:** limited-impact, edge-case, hardening, or liveness issue that should still be corrected or explicitly accepted.
-
-## Disclaimer
-
-This assessment is time-bounded and limited to the identified repository snapshots and documented scope. It cannot prove the absence of vulnerabilities. Changes after the reviewed commits, deployment configuration, privileged-key handling, external dependencies, and operational processes may introduce additional risk. The report is not financial, legal, or investment advice.
 
 ## Findings Summary
 

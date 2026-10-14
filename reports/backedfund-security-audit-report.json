@@ -41,6 +41,11 @@
     },
     "authors": [
       {
+        "name": "0x23r0",
+        "role": "Security Researcher",
+        "url": "https://github.com/0x23r0"
+      },
+      {
         "name": "Favour Aniogor",
         "role": "Security Researcher",
         "url": "https://github.com/PhantomOz"
